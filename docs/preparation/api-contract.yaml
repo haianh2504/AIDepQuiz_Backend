@@ -157,7 +157,10 @@ paths:
                     mean: 3.5
                     displayMean: '3.50'
                 feedback: Bạn đang sử dụng AI khá thường xuyên trong một số hoạt động.
-                advice: Hãy thử tự phác thảo hướng giải quyết trước khi hỏi AI và kiểm tra lại những thông tin quan trọng.
+                advice:
+                  - Hãy thử tự phác thảo hướng giải quyết trước khi hỏi AI.
+                  - Kiểm tra lại những thông tin quan trọng từ nguồn đáng tin cậy.
+                  - Dành thời gian hoàn thành một số nhiệm vụ mà không dùng AI.
                 limitations:
                   - Kết quả dựa trên tự báo cáo.
                   - Đây là phiên bản thử nghiệm tiếng Việt gồm 16 câu hỏi.
@@ -258,6 +261,7 @@ components:
         - questionCount
         - scale
         - questions
+        - scoring
       properties:
         testSlug:
           type: string
@@ -285,6 +289,99 @@ components:
           maxItems: 16
           items:
             $ref: '#/components/schemas/Question'
+        scoring:
+          $ref: '#/components/schemas/ScoringRules'
+
+    ScoringRules:
+      type: object
+      additionalProperties: false
+      description: Quy tắc chấm điểm chính thức của phiên bản bài test.
+      required:
+        - itemCount
+        - scoringMethod
+        - totalRange
+        - meanRange
+        - displayDecimals
+        - reverseScoredItems
+        - categoryRanges
+      properties:
+        itemCount:
+          type: integer
+          enum:
+            - 16
+        scoringMethod:
+          type: string
+          enum:
+            - mean
+          description: Điểm chính dùng để phân loại là trung bình của 16 câu trả lời.
+        totalRange:
+          $ref: '#/components/schemas/ScoreRange'
+        meanRange:
+          $ref: '#/components/schemas/MeanRange'
+        displayDecimals:
+          type: integer
+          enum:
+            - 2
+          description: Số chữ số hiển thị sau dấu thập phân.
+        reverseScoredItems:
+          type: boolean
+          enum:
+            - false
+          description: Phase 1 không có item đảo chiều.
+        categoryRanges:
+          type: array
+          minItems: 3
+          maxItems: 3
+          description: |
+            Các cận điểm đều bao gồm. Backend phải phân loại dựa trên mean chưa
+            làm tròn: 1.00–2.33 thấp, 2.34–3.66 trung bình, 3.67–5.00 cao.
+          example:
+            - key: low
+              label: Thấp
+              minMean: 1.0
+              maxMean: 2.33
+            - key: moderate
+              label: Trung bình
+              minMean: 2.34
+              maxMean: 3.66
+            - key: high
+              label: Cao
+              minMean: 3.67
+              maxMean: 5.0
+          items:
+            $ref: '#/components/schemas/CategoryRange'
+
+    ScoreRange:
+      type: object
+      additionalProperties: false
+      required:
+        - min
+        - max
+      properties:
+        min:
+          type: integer
+          enum:
+            - 16
+        max:
+          type: integer
+          enum:
+            - 80
+
+    MeanRange:
+      type: object
+      additionalProperties: false
+      required:
+        - min
+        - max
+      properties:
+        min:
+          type: number
+          enum:
+            - 1
+        max:
+          type: number
+          enum:
+            - 5
 
     LikertScale:
       type: object
@@ -448,9 +545,15 @@ components:
         feedback:
           type: string
           minLength: 1
+          description: Nội dung hiển thị dưới tiêu đề "Nhận xét chung".
         advice:
-          type: string
-          minLength: 1
+          type: array
+          minItems: 1
+          maxItems: 3
+          description: Các lời khuyên hiển thị dưới dạng danh sách bullet trên UI.
+          items:
+            type: string
+            minLength: 1
         limitations:
           type: array
           items:
@@ -522,6 +625,9 @@ components:
     Category:
       type: object
       additionalProperties: false
+      description: |
+        Nhãn phân loại giáo dục dựa trên mean chưa làm tròn. Các range hiện tại
+        là provisional và không phải cutoff lâm sàng hay chuẩn quốc tế.
       required:
         - key
         - label
@@ -542,6 +648,38 @@ components:
         description:
           type: string
           description: Giải thích giáo dục, không phải cutoff chẩn đoán.
+
+    CategoryRange:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - label
+        - minMean
+        - maxMean
+      properties:
+        key:
+          type: string
+          enum:
+            - low
+            - moderate
+            - high
+        label:
+          type: string
+          enum:
+            - Thấp
+            - Trung bình
+            - Cao
+        minMean:
+          type: number
+          minimum: 1
+          maximum: 5
+          description: Cận dưới, bao gồm cả giá trị này.
+        maxMean:
+          type: number
+          minimum: 1
+          maximum: 5
+          description: Cận trên, bao gồm cả giá trị này.
 
     ErrorResponse:
       type: object
