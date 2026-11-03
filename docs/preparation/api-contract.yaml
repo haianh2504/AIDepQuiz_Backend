@@ -1,0 +1,599 @@
+openapi: 3.0.3
+info:
+  title: AIDepQuiz API
+  version: 1.0.0
+  description: |
+    API cho AIDepQuiz Phase 1: bài tự đánh giá mức độ phụ thuộc vào AI bằng tiếng Việt.
+
+    Phạm vi Phase 1:
+    - 16 câu hỏi bắt buộc.
+    - Thang Likert 5 mức, giá trị từ 1 đến 5.
+    - Bốn nhóm, mỗi nhóm 4 câu hỏi.
+    - Backend là nguồn chính để tính điểm, phân loại và tạo nội dung phản hồi.
+    - Không yêu cầu đăng nhập và không lưu kết quả như dữ liệu nghiên cứu.
+
+    Frontend flow:
+    - /quiz tải câu hỏi và gửi câu trả lời.
+    - Sau khi submit thành công, frontend chuyển sang /result_quiz.
+    - /result_quiz hiển thị response nhận được từ submit.
+    - API không lưu attempt và không có attemptId trong Phase 1.
+  contact:
+    name: AIDepQuiz project
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+tags:
+  - name: Tests
+    description: Lấy nội dung bài test
+  - name: Submissions
+    description: Chấm một lần làm bài không lưu trữ
+
+paths:
+  /tests/ai-dependence:
+    get:
+      tags:
+        - Tests
+      operationId: getAiDependenceTest
+      summary: Lấy bài test AI Dependence tiếng Việt
+      description: |
+        Trả về phiên bản bài test đang hoạt động. Frontend phải render câu hỏi
+        và lựa chọn từ response, không tự tạo hoặc tự thay đổi nội dung câu hỏi.
+      responses:
+        '200':
+          description: Bài test hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizDefinitionResponse'
+        '404':
+          description: Không tìm thấy bài test đang hoạt động
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: TEST_NOT_FOUND
+                  message: Không tìm thấy bài test yêu cầu.
+                  details: []
+        '500':
+          description: Lỗi hệ thống hoặc cơ sở dữ liệu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tests/ai-dependence/submit:
+    post:
+      tags:
+        - Submissions
+      operationId: submitAiDependenceTest
+      summary: Chấm bài test AI Dependence
+      description: |
+        Nhận đủ 16 câu trả lời, tính điểm ở backend và trả về toàn bộ kết quả
+        trong cùng response. API không lưu attempt, không nhận attemptId và
+        không yêu cầu đăng nhập.
+
+        Frontend không được gửi totalScore, mean, category, feedback hoặc advice
+        để yêu cầu backend sử dụng. Những trường này đều do backend tạo ra.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitQuizRequest'
+            example:
+              testVersion: vi-dependence-v1
+              answers:
+                - questionId: dep-01
+                  value: 4
+                - questionId: dep-02
+                  value: 3
+                - questionId: dep-03
+                  value: 2
+                - questionId: dep-04
+                  value: 4
+                - questionId: dep-05
+                  value: 3
+                - questionId: dep-06
+                  value: 4
+                - questionId: dep-07
+                  value: 3
+                - questionId: dep-08
+                  value: 4
+                - questionId: dep-09
+                  value: 2
+                - questionId: dep-10
+                  value: 3
+                - questionId: dep-11
+                  value: 4
+                - questionId: dep-12
+                  value: 3
+                - questionId: dep-13
+                  value: 4
+                - questionId: dep-14
+                  value: 3
+                - questionId: dep-15
+                  value: 3
+                - questionId: dep-16
+                  value: 4
+      responses:
+        '200':
+          description: Chấm điểm thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitQuizResponse'
+              example:
+                testSlug: ai-dependence
+                testVersion: vi-dependence-v1
+                locale: vi-VN
+                score:
+                  totalScore: 53
+                  maxTotalScore: 80
+                  mean: 3.3125
+                  displayMean: '3.31'
+                category:
+                  key: moderate
+                  label: Trung bình
+                  description: Mức phụ thuộc được tự báo cáo ở mức trung gian.
+                subscales:
+                  - key: emotional
+                    label: Phụ thuộc về cảm xúc
+                    mean: 3.25
+                    displayMean: '3.25'
+                  - key: functional
+                    label: Phụ thuộc về chức năng
+                    mean: 3.5
+                    displayMean: '3.50'
+                  - key: cognitive
+                    label: Phụ thuộc về nhận thức
+                    mean: 3
+                    displayMean: '3.00'
+                  - key: control
+                    label: Phụ thuộc về kiểm soát
+                    mean: 3.5
+                    displayMean: '3.50'
+                feedback: Bạn đang sử dụng AI khá thường xuyên trong một số hoạt động.
+                advice: Hãy thử tự phác thảo hướng giải quyết trước khi hỏi AI và kiểm tra lại những thông tin quan trọng.
+                limitations:
+                  - Kết quả dựa trên tự báo cáo.
+                  - Đây là phiên bản thử nghiệm tiếng Việt gồm 16 câu hỏi.
+                  - Các mức phân loại chỉ nhằm mục đích giáo dục và tự nhận thức.
+                  - Kết quả không phải là chẩn đoán tâm lý.
+        '400':
+          description: Request không hợp lệ về cú pháp hoặc thiếu trường bắt buộc
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: INVALID_REQUEST
+                  message: Request không hợp lệ.
+                  details:
+                    - field: testVersion
+                      reason: Trường này là bắt buộc.
+        '404':
+          description: Không tìm thấy bài test hoặc phiên bản bài test
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: TEST_NOT_FOUND
+                  message: Không tìm thấy bài test hoặc phiên bản yêu cầu.
+                  details: []
+        '409':
+          description: Phiên bản gửi lên không khớp với phiên bản được hỗ trợ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: TEST_VERSION_MISMATCH
+                  message: Phiên bản bài test không còn được hỗ trợ.
+                  details: []
+        '422':
+          description: Request đúng cú pháp nhưng dữ liệu trả lời không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidAnswerCount:
+                  value:
+                    error:
+                      code: INVALID_ANSWER_COUNT
+                      message: Bài test yêu cầu đủ 16 câu trả lời.
+                      details:
+                        - field: answers
+                          reason: Expected 16 answers.
+                          expected: 16
+                          received: 14
+                duplicateQuestionId:
+                  value:
+                    error:
+                      code: DUPLICATE_QUESTION_ID
+                      message: Danh sách câu trả lời không được chứa questionId trùng nhau.
+                      details: []
+                unknownQuestionId:
+                  value:
+                    error:
+                      code: UNKNOWN_QUESTION_ID
+                      message: questionId không thuộc phiên bản bài test.
+                      details: []
+                invalidLikertValue:
+                  value:
+                    error:
+                      code: INVALID_LIKERT_VALUE
+                      message: Giá trị Likert phải là số nguyên từ 1 đến 5.
+                      details: []
+        '500':
+          description: Lỗi hệ thống khi xử lý request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: INTERNAL_ERROR
+                  message: Hệ thống chưa thể xử lý yêu cầu.
+                  details: []
+
+components:
+  schemas:
+    QuizDefinitionResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - testSlug
+        - testVersion
+        - locale
+        - title
+        - questionCount
+        - scale
+        - questions
+      properties:
+        testSlug:
+          type: string
+          enum:
+            - ai-dependence
+        testVersion:
+          type: string
+          example: vi-dependence-v1
+        locale:
+          type: string
+          enum:
+            - vi-VN
+        title:
+          type: string
+          example: Mức độ phụ thuộc vào AI
+        questionCount:
+          type: integer
+          enum:
+            - 16
+        scale:
+          $ref: '#/components/schemas/LikertScale'
+        questions:
+          type: array
+          minItems: 16
+          maxItems: 16
+          items:
+            $ref: '#/components/schemas/Question'
+
+    LikertScale:
+      type: object
+      additionalProperties: false
+      required:
+        - min
+        - max
+        - type
+        - labels
+      properties:
+        min:
+          type: integer
+          enum:
+            - 1
+        max:
+          type: integer
+          enum:
+            - 5
+        type:
+          type: string
+          enum:
+            - likert
+        labels:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - value
+              - text
+            properties:
+              value:
+                type: integer
+                minimum: 1
+                maximum: 5
+              text:
+                type: string
+
+    Question:
+      type: object
+      additionalProperties: false
+      required:
+        - questionId
+        - questionNumber
+        - subscale
+        - text
+        - options
+      properties:
+        questionId:
+          type: string
+          pattern: '^dep-[0-9]{2}$'
+        questionNumber:
+          type: integer
+          minimum: 1
+          maximum: 16
+        subscale:
+          type: string
+          enum:
+            - emotional
+            - functional
+            - cognitive
+            - control
+          description: Key cố định để ánh xạ tên nhóm ở frontend.
+        text:
+          type: string
+          minLength: 1
+        options:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/LikertOption'
+
+    LikertOption:
+      type: object
+      additionalProperties: false
+      required:
+        - optionId
+        - value
+        - text
+      properties:
+        optionId:
+          type: string
+        value:
+          type: integer
+          minimum: 1
+          maximum: 5
+        text:
+          type: string
+
+    SubmitQuizRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - testVersion
+        - answers
+      properties:
+        testVersion:
+          type: string
+          example: vi-dependence-v1
+        answers:
+          type: array
+          minItems: 16
+          maxItems: 16
+          description: Exactly 16 answers. questionId values must be unique and belong to the requested test version.
+          items:
+            $ref: '#/components/schemas/Answer'
+
+    Answer:
+      type: object
+      additionalProperties: false
+      required:
+        - questionId
+        - value
+      properties:
+        questionId:
+          type: string
+          pattern: '^dep-[0-9]{2}$'
+        value:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Likert value. Phase 1 has no reverse-scored items.
+
+    SubmitQuizResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - testSlug
+        - testVersion
+        - locale
+        - score
+        - category
+        - subscales
+        - feedback
+        - advice
+        - limitations
+      properties:
+        testSlug:
+          type: string
+          enum:
+            - ai-dependence
+        testVersion:
+          type: string
+        locale:
+          type: string
+          enum:
+            - vi-VN
+        score:
+          $ref: '#/components/schemas/OverallScore'
+        category:
+          $ref: '#/components/schemas/Category'
+        subscales:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/SubscaleScore'
+        feedback:
+          type: string
+          minLength: 1
+        advice:
+          type: string
+          minLength: 1
+        limitations:
+          type: array
+          items:
+            type: string
+
+    OverallScore:
+      type: object
+      additionalProperties: false
+      required:
+        - totalScore
+        - maxTotalScore
+        - mean
+        - displayMean
+      properties:
+        totalScore:
+          type: integer
+          minimum: 16
+          maximum: 80
+          description: Tổng 16 item, là số nguyên từ 16 đến 80.
+        maxTotalScore:
+          type: integer
+          enum:
+            - 80
+        mean:
+          type: number
+          format: double
+          minimum: 1
+          maximum: 5
+          description: Điểm thực dùng để phân loại. Không làm tròn trước khi phân loại.
+        displayMean:
+          type: string
+          pattern: '^[1-5]\.[0-9]{2}$'
+          description: Điểm đã làm tròn 2 chữ số để hiển thị. Dùng string để giữ số 0 ở cuối, ví dụ 3.50.
+
+    SubscaleScore:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - label
+        - mean
+        - displayMean
+      properties:
+        key:
+          type: string
+          enum:
+            - emotional
+            - functional
+            - cognitive
+            - control
+        label:
+          type: string
+          enum:
+            - Phụ thuộc về cảm xúc
+            - Phụ thuộc về chức năng
+            - Phụ thuộc về nhận thức
+            - Phụ thuộc về kiểm soát
+        mean:
+          type: number
+          format: double
+          minimum: 1
+          maximum: 5
+          description: Điểm thực dùng để diễn giải nhóm, tính trên 4 item.
+        displayMean:
+          type: string
+          pattern: '^[1-5]\.[0-9]{2}$'
+          description: Điểm nhóm đã làm tròn 2 chữ số để hiển thị.
+
+    Category:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - label
+        - description
+      properties:
+        key:
+          type: string
+          enum:
+            - low
+            - moderate
+            - high
+        label:
+          type: string
+          enum:
+            - Thấp
+            - Trung bình
+            - Cao
+        description:
+          type: string
+          description: Giải thích giáo dục, không phải cutoff chẩn đoán.
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          $ref: '#/components/schemas/Error'
+
+    Error:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+        - details
+      properties:
+        code:
+          type: string
+          enum:
+            - INVALID_REQUEST
+            - TEST_NOT_FOUND
+            - TEST_VERSION_MISMATCH
+            - INVALID_ANSWER_COUNT
+            - DUPLICATE_QUESTION_ID
+            - UNKNOWN_QUESTION_ID
+            - INVALID_LIKERT_VALUE
+            - INTERNAL_ERROR
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+
+    ErrorDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - field
+        - reason
+      properties:
+        field:
+          type: string
+        reason:
+          type: string
+        expected:
+          oneOf:
+            - type: string
+            - type: integer
+        received:
+          oneOf:
+            - type: string
+            - type: integer
