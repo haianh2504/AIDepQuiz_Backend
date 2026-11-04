@@ -35,3 +35,5 @@ build/
 ### SUPABASE ###
 supabase/.temp/*
 !supabase/.temp/**/*.sql
+
+.DS_Store

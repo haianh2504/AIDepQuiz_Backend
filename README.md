@@ -94,7 +94,7 @@ mean         = totalScore / 16                # 1.00–5.00
 subscaleMean = sum(4 items in a group) / 4
 ```
 
-`mean` chưa làm tròn là chỉ số phân loại chính. Làm tròn chỉ khi hiển thị: điểm trung bình toàn bài hiển thị hai chữ số thập phân; điểm nhóm hiển thị một hoặc hai chữ số, bỏ số 0 cuối không cần thiết (ví dụ `3.0`, `3.25`). Điểm tổng là số nguyên và chỉ là thông tin bổ sung.
+`mean` chưa làm tròn là chỉ số phân loại chính. Điểm trung bình toàn bài hiển thị hai chữ số thập phân; điểm tổng là số nguyên và chỉ là thông tin bổ sung. Lưu ý: contract Backend hiện yêu cầu `subscales[].displayMean` có đúng hai chữ số (ví dụ `3.50`), trong khi contract Frontend cho phép bỏ số 0 cuối (ví dụ `3.5`). Đây là khác biệt cần được giải quyết giữa hai contract trước khi tích hợp.
 
 ### Nhóm kết quả tạm thời
 
@@ -166,7 +166,13 @@ Chỉ nút bắt đầu bài test điều hướng từ `/` sang `/quiz`; menu n
 
 ## API contract
 
-Contract API chuẩn của dự án là `[Frontend/api-contract.yaml](Frontend/api-contract.yaml)` (OpenAPI 3.0.3, base path `/api/v1`). Contract BE tại `Backend/docs/preparation/api-contract.yaml` hiện là bản sao chưa đồng bộ hoàn toàn: nhãn nhóm `control` và định dạng `displayMean` khác bản FE. Hãy dùng contract FE làm chuẩn và đồng bộ bản BE trước khi triển khai endpoints.
+Contract API của repository Backend nằm tại [`docs/preparation/api-contract.yaml`](docs/preparation/api-contract.yaml) (OpenAPI 3.0.3, base path `/api/v1`). Contract frontend tương ứng nằm ở repository sibling `../Frontend/api-contract.yaml`; hai contract hiện chưa thống nhất hoàn toàn. Cả hai contract trả `subscale` (key) và `subscaleLabel` (chuỗi hiển thị) cho từng câu hỏi, để giao diện hiện tên khía cạnh phù hợp với câu đang xem. Nhãn `control` thống nhất là “Mất khả năng kiểm soát”; điểm `subscales[].displayMean` cho phép một hoặc hai chữ số sau dấu thập phân. Contract Backend và Frontend được đồng bộ theo các quy tắc này.
+
+### Dữ liệu DB cho hai màn hình
+
+Với schema hiện tại, UC01 có thể dựng nội dung bằng cách lấy version đang active, join `questions` với `subscales` để trả `subscale` (key) cùng `subscaleLabel` (chuỗi hiển thị), rồi join `options` để trả `optionId`, `value` và `text`; sắp xếp câu hỏi theo `questions.display_order`, lựa chọn theo `options.display_order`. `scale_labels` cung cấp nhãn chung Likert 1–5. Vì mỗi câu gắn trực tiếp với một subscale, FE nhận nhãn phù hợp theo từng câu/range mà không tự đoán từ số câu.
+
+UC02 tính `totalScore`, `mean` và bốn subscale mean từ giá trị trả lời; chọn một dòng `results` theo version/category range để lấy category, description, feedback, `advice` và `limitations`. Các giá trị tổng/điểm nhóm được tính theo request, không cần bảng attempt. Screenshot kết quả có ghi điểm minh họa; không lưu các điểm đó thành dữ liệu seed.
 
 ### UC01 — Tải bài test
 
