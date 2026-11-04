@@ -2,7 +2,7 @@
 
 Backend REST API cho AIDepQuiz, ứng dụng giúp người dùng tự đánh giá mức độ phụ thuộc vào AI trong học tập và công việc. Backend chịu trách nhiệm cung cấp nội dung quiz, kiểm tra câu trả lời, tính điểm, phân loại và trả về nhận xét cùng lời khuyên.
 
-> Tài liệu này được xây dựng dựa trên README dự án và `api-contract.yaml` của Phase 1. Repository hiện mới là Spring Boot skeleton; controller, entity, schema và rate limiter vẫn cần được triển khai.
+> Tài liệu này mô tả backend Phase 1 theo README frontend và OpenAPI contract tại `docs/preparation/api-contract.yaml`. Repository hiện có Spring Boot, ba JPA entity và migration PostgreSQL; controller, repository, service, dữ liệu seed và API runtime chưa được triển khai đầy đủ.
 
 ## 1. Trạng thái và phạm vi phiên bản đầu tiên
 
@@ -16,17 +16,15 @@ Backend REST API cho AIDepQuiz, ứng dụng giúp người dùng tự đánh gi
 - Tính `totalScore`, `mean` và `displayMean` ở backend.
 - Trả về category, điểm theo 4 nhóm, nhận xét chung, danh sách lời khuyên và giới hạn diễn giải.
 - Không yêu cầu đăng nhập và không lưu lịch sử kết quả cá nhân trong phiên bản hiện tại.
-- Áp dụng rate limiter cho các REST endpoint sau khi cơ chế giới hạn được chốt và triển khai.
+- Rate limiting chưa có trong code hoặc OpenAPI contract hiện tại; chỉ bổ sung khi yêu cầu và chính sách giới hạn được xác định.
 
-### Ngoài phạm vi hiện tại
+### Ngoài phạm vi Phase 1
 
-- Đăng ký, đăng nhập, session hoặc phân quyền người dùng.
-- Admin dashboard hoặc API quản trị nội dung.
+- Đăng ký, đăng nhập, session hoặc phân quyền.
+- Dashboard/API quản trị nội dung.
 - Cá nhân hóa lời khuyên bằng AI theo thời gian thực.
-- Lưu kết quả để tính top phần trăm hoặc tổng số người đã hoàn thành quiz.
-- Lưu attempt hoặc lịch sử kết quả người dùng.
-- API quản trị nội dung, đăng nhập và phân quyền.
-- Migration tool và quy trình import Excel hoàn chỉnh — các mục này cần được định nghĩa trước khi triển khai production.
+- Lưu attempt, lịch sử kết quả hoặc dữ liệu để tính thống kê người dùng.
+- Rate limiting; chính sách này chưa được chốt trong contract hiện tại.
 
 ## 2. Công nghệ
 
@@ -50,13 +48,25 @@ Các dependency hiện tại còn gồm JDBC, PostgreSQL driver, Lombok, DevTool
 ### Yêu cầu
 
 - JDK 21.
-- Maven không bắt buộc nếu sử dụng Maven Wrapper.
-- PostgreSQL khi chạy integration test hoặc ứng dụng có truy cập database.
-- Docker Desktop nếu sử dụng `compose.yaml`.
+- Maven không bắt buộc nếu dùng Maven Wrapper.
+- PostgreSQL có thể truy cập được; cấu hình hiện tại dùng PostgreSQL/Supabase.
+- Docker Desktop chỉ cần nếu chủ động chạy PostgreSQL từ `compose.yaml`.
+
+### Cấu hình kết nối database
+
+`src/main/resources/application.properties` yêu cầu các biến môi trường sau:
+
+| Biến | Ý nghĩa |
+|---|---|
+| `SUPABASE_DB_DATASOURCE` | JDBC URL của PostgreSQL |
+| `SUPABASE_DB_USERNAME` | Tên người dùng database |
+| `SUPABASE_DB_PASSWORD` | Mật khẩu database |
+
+Cung cấp các giá trị này trong môi trường chạy trước khi khởi động ứng dụng hoặc test. Hibernate đang dùng `ddl-auto=validate`, nên schema database phải tồn tại và khớp mapping JPA. Không commit thông tin kết nối thật.
 
 ### Cài đặt và chạy
 
-Clone repository, chuyển vào thư mục backend và chạy:
+Từ thư mục backend, chạy:
 
 ```bash
 ./mvnw test
@@ -70,17 +80,17 @@ mvnw.cmd test
 mvnw.cmd spring-boot:run
 ```
 
-API sử dụng base path `/api/v1`. Danh sách endpoint và schema chính thức nằm trong `api-contract.yaml`. Hiện `application.properties` mới khai báo tên ứng dụng và chưa có cấu hình datasource hoàn chỉnh.
+Các lệnh cần kết nối database theo cấu hình trên. Spring Docker Compose integration hiện bị tắt trong `application.properties`; nếu dùng `compose.yaml`, hãy khởi động PostgreSQL riêng và cung cấp JDBC URL cùng thông tin đăng nhập tương ứng.
 
 ## 4. Use cases và API chính thức
 
-API được mô tả trong file `api-contract.yaml`, sử dụng OpenAPI 3.0.3 và base path:
+Contract OpenAPI 3.0.3 của bản backend nằm tại [`docs/preparation/api-contract.yaml`](docs/preparation/api-contract.yaml); contract được README frontend chỉ định làm chuẩn nằm ở `../Frontend/api-contract.yaml`. Hai file hiện chưa đồng bộ hoàn toàn: bản backend còn dùng nhãn nhóm `Phụ thuộc về kiểm soát` và định dạng điểm nhóm cố định hai chữ số, trong khi chuẩn frontend dùng `Mất khả năng kiểm soát` và bỏ số 0 thập phân cuối không cần thiết. Hãy theo contract frontend khi triển khai và đồng bộ bản sao backend trước khi dùng nó làm contract triển khai. Base path:
 
 ```text
 /api/v1
 ```
 
-Backend không yêu cầu đăng nhập, không nhận `attemptId` và không lưu lịch sử kết quả cá nhân trong Phase 1.
+Theo contract Phase 1, API không yêu cầu đăng nhập, không nhận `attemptId` và không lưu lịch sử kết quả cá nhân. Các endpoint trong contract là đặc tả; chúng chưa được triển khai trong controller/runtime của repository hiện tại.
 
 ### Use case
 
@@ -188,72 +198,47 @@ Error body thống nhất:
 }
 ```
 
-Rate limit khi được triển khai sẽ sử dụng HTTP `429 Too Many Requests`.
+Rate limiting không được mô tả trong contract hiện tại; nếu được bổ sung, cần cập nhật contract cùng response `429 Too Many Requests`.
 
-## 5. Luồng dữ liệu
+## 5. Kiến trúc và trạng thái triển khai
+
+Luồng dự kiến theo contract:
 
 ```text
 Next.js frontend
-        ↓ REST request
-Spring MVC Controller
+        ↓ REST/JSON
+Spring MVC controller (chưa triển khai)
         ↓
-Application / Service layer
+Application/service layer (chưa triển khai)
         ↓
 Spring Data JPA + Hibernate
         ↓
 PostgreSQL trên Supabase
 ```
 
-Điểm số phải được tính ở backend dựa trên dữ liệu trong database; frontend chỉ gửi lựa chọn của người dùng và hiển thị response kết quả.
-
+Hiện repository có lớp khởi động Spring Boot và các entity `Question`, `Option`, `Result`. Controller, repository và service mới là package placeholder; API chưa thể được xem là đang hoạt động chỉ dựa trên OpenAPI contract.
 
 ## 6. Database và dữ liệu nội dung
 
-PostgreSQL là database chính và sẽ được host trên Supabase. Dữ liệu nội dung cần được quản lý gồm:
+PostgreSQL là database Phase 1; Supabase là môi trường hosting dự kiến. Migration hiện có tại [`supabase/migrations/20261102084017_database_schema_ai_dep_quiz.sql`](supabase/migrations/20261102084017_database_schema_ai_dep_quiz.sql) định nghĩa các bảng `test_versions`, `scale_labels`, `subscales`, `questions`, `options` và `results`. Schema không tạo bảng `attempts` hoặc lịch sử kết quả cá nhân, phù hợp với contract stateless.
 
-- Câu hỏi và thứ tự hiển thị.
-- Phiên bản bài test và locale.
-- Nhóm đo (`emotional`, `functional`, `cognitive`, `control`).
-- Các lựa chọn thuộc từng câu hỏi.
-- Giá trị Likert từ 1 đến 5 của từng lựa chọn.
-- Quy tắc chấm điểm và mức đánh giá theo khoảng điểm.
-- Nhận xét chung và danh sách lời khuyên tương ứng.
+Ba JPA entity đã có (`Question`, `Option`, `Result`), nhưng mapping chưa bao quát đầy đủ schema migration và một số trường chưa khớp cột trong migration. Vì vậy không nên xem persistence đã sẵn sàng để chạy với `ddl-auto=validate`. Seed data và quy trình nạp nội dung chưa có trong repository.
 
-Phase 1 không cần bảng `attempts` hoặc bảng lưu lịch sử kết quả cá nhân. Nếu backend lưu mẫu `advice` trong PostgreSQL bằng JSONB, đó là chi tiết nội bộ; API vẫn phải trả về `advice` dưới dạng mảng chuỗi JSON.
-
-README frontend định hướng chuẩn bị nội dung bằng file Excel rồi import vào PostgreSQL thông qua backend. Schema, migration framework, format Excel, seed data và lệnh import **chưa được định nghĩa trong repository hiện tại**; cần bổ sung trước khi hướng dẫn vận hành database.
-
-`compose.yaml` hiện có service PostgreSQL mẫu với database/user/password mẫu và port container `5432`. Đây chỉ là cấu hình phát triển ban đầu, không dùng thông tin mẫu này cho môi trường production. Cấu hình datasource local và Supabase chưa được hoàn thiện.
+`compose.yaml` có PostgreSQL mẫu dành cho phát triển. Giá trị database/user/password trong đó chỉ là mẫu; không sử dụng cho môi trường production. Ứng dụng không tự bật Docker Compose integration vì `spring.docker.compose.enabled=false`.
 
 ## 7. Cấu hình môi trường
 
-Hiện chưa có `.env.example` và chưa có danh sách biến môi trường được chuẩn hóa. Khi cấu hình datasource, cần bổ sung tài liệu cho các nhóm giá trị sau mà không commit secret:
+Datasource được cấu hình trong `src/main/resources/application.properties` bằng các biến `SUPABASE_DB_DATASOURCE`, `SUPABASE_DB_USERNAME` và `SUPABASE_DB_PASSWORD`. Dùng JDBC URL PostgreSQL hợp lệ và thông tin đăng nhập của database tương ứng; giữ secret trong environment settings hoặc secret store, không đặt trong source code hay README.
 
-- JDBC URL PostgreSQL.
-- Username và password database.
-- Hibernate/JPA profile phù hợp với local và production.
-- Port ứng dụng nếu khác mặc định.
-- Rate-limit configuration.
-- CORS origin của frontend Vercel và local.
-
-Secret của Supabase, Render và database phải được lưu trong secret/environment settings của môi trường chạy, không đặt trong source code hoặc commit vào repository.
+Hibernate hiện dùng `ddl-auto=validate`, vì vậy ứng dụng không tự tạo hoặc cập nhật schema. Cần hoàn thiện migration, entity mapping và dữ liệu nội dung trước khi chạy ứng dụng với database thật. CORS origin và biến cấu hình rate limit chưa được khai báo trong repository.
 
 ## 8. Rate limiter
 
-Rate limiter là yêu cầu bắt buộc của backend nhưng **chưa được triển khai trong code hiện tại**. Thiết kế cần chốt trước khi implement:
-
-- Giới hạn theo IP, theo route, hoặc kết hợp cả hai.
-- Cửa sổ thời gian và số request tối đa.
-- Các endpoint áp dụng, tối thiểu là endpoint lấy quiz và submit quiz.
-- Cách xử lý proxy của Render để lấy client IP an toàn.
-- Response `429 Too Many Requests`, header liên quan và thông tin retry nếu có.
-- Storage của counter trong môi trường nhiều instance; không nên chỉ dùng memory local nếu Render scale nhiều instance.
-
-Rate limiter không thay thế validation, giới hạn payload và các biện pháp bảo vệ database.
+Rate limiter chưa được triển khai và không nằm trong contract OpenAPI hiện tại. Nếu được bổ sung, cần xác định ngưỡng, cửa sổ thời gian, endpoint áp dụng, xử lý IP phía sau proxy và phản hồi `429 Too Many Requests` trước khi ghi thành hướng dẫn vận hành.
 
 ## 9. Kiểm thử và kiểm tra chất lượng
 
-Test hiện tại là Spring Boot context test trong `BackendApplicationTests`. Chạy bằng:
+Repository hiện có một Spring Boot context test tại `BackendApplicationTests`; test cần các biến datasource đã nêu ở phần Quick start vì cấu hình ứng dụng kết nối PostgreSQL. Chạy bằng:
 
 ```bash
 ./mvnw test
@@ -265,7 +250,7 @@ Khi API được triển khai, cần bổ sung test cho:
 - Mỗi câu có đúng 5 lựa chọn Likert từ 1 đến 5.
 - Submit đủ 16 câu và tính `totalScore`, `mean`, `displayMean` đúng.
 - Kiểm tra category ranges dựa trên `mean` chưa làm tròn.
-- Kiểm tra 4 subscale và key `control` với label “Phụ thuộc về kiểm soát”.
+- Kiểm tra 4 subscale, key `control`, nhãn “Mất khả năng kiểm soát” và định dạng `displayMean` theo contract frontend.
 - Kiểm tra `feedback` và `advice[]` trong response.
 - Thiếu câu trả lời, duplicate `questionId`, `questionId` sai và giá trị Likert sai.
 - Response error và HTTP status.
@@ -280,27 +265,17 @@ Lệnh kiểm tra build Maven:
 ./mvnw package
 ```
 
-Các test integration, migration và contract test chưa được cấu hình trong repository hiện tại.
+Các test integration, migration và contract test chưa được cấu hình trong repository hiện tại. Những mục kiểm tra API, scoring và rate limiting trong danh sách trên là yêu cầu cần bổ sung, không phải coverage hiện có.
 
 ## 10. Deployment
 
-Render là host backend dự kiến; Supabase là host PostgreSQL dự kiến. Chi tiết deploy chưa được cấu hình trong repository, vì vậy các giá trị sau vẫn cần xác định trên Render:
-
-- Build command và start command chính thức.
-- Java runtime/build image.
-- Environment variables production.
-- Health check endpoint.
-- CORS origin của frontend production.
-- Migration/seed strategy khi deploy.
-- Log, monitoring và rollback procedure.
-
-Không đưa credential Supabase vào README. Sau khi có contract và cấu hình deploy, cập nhật phần này bằng các lệnh thực tế đã kiểm tra trên Render.
+Render là backend host dự kiến và Supabase là PostgreSQL host dự kiến. Repository hiện chưa có cấu hình deploy hoặc CI/CD, nên chưa có build/start command, health check, migration/seed strategy hay rollback procedure đã xác nhận. Chỉ bổ sung các hướng dẫn deploy sau khi cấu hình thực tế được thiết lập và kiểm tra.
 
 ## 11. Troubleshooting
 
 ### Ứng dụng không khởi động do database
 
-Kiểm tra PostgreSQL đang chạy, datasource configuration đã được cung cấp và thông tin kết nối không dùng giá trị mẫu trong `compose.yaml`.
+Kiểm tra PostgreSQL có thể truy cập, ba biến datasource được đặt đúng và JDBC URL cùng thông tin đăng nhập hợp lệ. `ddl-auto=validate` yêu cầu schema đã tồn tại và khớp entity mapping; giá trị mẫu trong `compose.yaml` không phải cấu hình production.
 
 ### Test context thất bại
 
@@ -310,11 +285,11 @@ Chạy lại:
 ./mvnw test
 ```
 
-Sau đó kiểm tra log Spring Boot và cấu hình datasource. Repository hiện chưa có test database độc lập nên môi trường test database cần được bổ sung khi persistence được triển khai.
+Sau đó kiểm tra log Spring Boot, datasource và schema. Context test hiện dùng cấu hình ứng dụng nên cần database PostgreSQL phù hợp; repository chưa cấu hình test database độc lập.
 
 ### Frontend không gọi được backend
 
-Kiểm tra API contract, backend URL, CORS origin và response error thực tế. Không thay đổi request body ở frontend theo phỏng đoán khi contract chưa được cập nhật.
+Kiểm tra API contract, backend URL, CORS origin và response error thực tế. Contract mô tả endpoint dự kiến; controller/API runtime hiện chưa có trong repository.
 
 ## 12. Đóng góp
 
@@ -322,6 +297,6 @@ Trước khi mở pull request:
 
 1. Cập nhật API contract nếu thay đổi endpoint hoặc schema.
 2. Bổ sung test cho use case và error case mới.
-3. Chạy `./mvnw test` và `./mvnw package`.
+3. Cung cấp cấu hình datasource cần thiết, sau đó chạy `./mvnw test` và `./mvnw package`.
 4. Cập nhật README này nếu thay đổi cách chạy, cấu hình, database hoặc deployment.
 5. Không commit secret, credential hoặc dữ liệu production.
