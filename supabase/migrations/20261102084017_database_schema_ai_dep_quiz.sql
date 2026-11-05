@@ -163,3 +163,168 @@ create table results (
     or (category_key = 'high' and min_mean = 3.67 and max_mean = 5.00)
   )
 );
+
+-- Idempotent seed script for the AIDepQuiz content schema.
+-- Requires the schema to be installed. Does not create or drop tables.
+BEGIN;
+
+INSERT INTO test_versions (
+    test_slug, test_version, locale, title, question_count,
+    scale_type, scale_min, scale_max, scoring_method,
+    total_min, total_max, mean_min, mean_max,
+    display_decimals, reverse_scored_items
+)
+VALUES (
+           'ai-dependence', 'vi-dependence-v1', 'vi-VN', 'Mức độ phụ thuộc vào AI',
+           16, 'likert', 1, 5, 'mean', 16, 80, 1.00, 5.00, 2, false
+       )
+ON CONFLICT (test_slug, test_version, locale) DO UPDATE SET
+                                                            title = EXCLUDED.title,
+                                                            question_count = EXCLUDED.question_count,
+                                                            scale_type = EXCLUDED.scale_type,
+                                                            scale_min = EXCLUDED.scale_min,
+                                                            scale_max = EXCLUDED.scale_max,
+                                                            scoring_method = EXCLUDED.scoring_method,
+                                                            total_min = EXCLUDED.total_min,
+                                                            total_max = EXCLUDED.total_max,
+                                                            mean_min = EXCLUDED.mean_min,
+                                                            mean_max = EXCLUDED.mean_max,
+                                                            display_decimals = EXCLUDED.display_decimals,
+                                                            reverse_scored_items = EXCLUDED.reverse_scored_items;
+
+INSERT INTO scale_labels (test_version_id, value, text, display_order)
+SELECT tv.id, v.value, v.label, v.ord
+FROM test_versions AS tv
+         CROSS JOIN (VALUES
+                         (1, 'Hoàn toàn không đồng ý', 1),
+                         (2, 'Không đồng ý', 2),
+                         (3, 'Không đồng ý cũng không phản đối', 3),
+                         (4, 'Đồng ý', 4),
+                         (5, 'Hoàn toàn đồng ý', 5)
+) AS v(value, label, ord)
+WHERE tv.test_slug = 'ai-dependence'
+  AND tv.test_version = 'vi-dependence-v1'
+  AND tv.locale = 'vi-VN'
+ON CONFLICT (test_version_id, value) DO UPDATE SET
+                                                   text = EXCLUDED.text,
+                                                   display_order = EXCLUDED.display_order;
+
+INSERT INTO subscales (test_version_id, subscale_key, label, display_order)
+SELECT tv.id, v.subscale_key, v.label, v.ord
+FROM test_versions AS tv
+         CROSS JOIN (VALUES
+                         ('emotional', 'Phụ thuộc về cảm xúc', 1),
+                         ('functional', 'Phụ thuộc về chức năng', 2),
+                         ('cognitive', 'Phụ thuộc về nhận thức', 3),
+                         ('control', 'Mất khả năng kiểm soát', 4)
+) AS v(subscale_key, label, ord)
+WHERE tv.test_slug = 'ai-dependence'
+  AND tv.test_version = 'vi-dependence-v1'
+  AND tv.locale = 'vi-VN'
+ON CONFLICT (test_version_id, subscale_key) DO UPDATE SET
+                                                          label = EXCLUDED.label,
+                                                          display_order = EXCLUDED.display_order;
+
+INSERT INTO questions (
+    test_version_id, subscale_id, question_id, content, display_order
+)
+SELECT tv.id, ss.id, v.question_id, v.content, v.ord
+FROM test_versions AS tv
+         CROSS JOIN (VALUES
+                         ('dep-01', 'emotional', 'Khi không thể dùng AI để hỗ trợ việc học, tôi cảm thấy bất an.', 1),
+                         ('dep-02', 'emotional', 'Sự hỗ trợ của AI khiến tôi yên tâm hơn khi học.', 2),
+                         ('dep-03', 'emotional', 'Tôi thấy căng thẳng khi gặp bài học khó mà không có AI hỗ trợ.', 3),
+                         ('dep-04', 'emotional', 'Khi lo lắng về việc học, tôi thường tìm đến AI để cảm thấy dễ chịu hơn.', 4),
+                         ('dep-05', 'functional', 'Tôi thấy khó hoàn thành bài tập hiệu quả nếu không có AI hỗ trợ.', 5),
+                         ('dep-06', 'functional', 'Tôi dựa vào AI để hoàn thành những phần quan trọng trong bài tập của mình.', 6),
+                         ('dep-07', 'functional', 'Tôi khó tự xử lý một nhiệm vụ học tập phức tạp khi không có AI.', 7),
+                         ('dep-08', 'functional', 'Tôi thường giao cho AI việc tìm ý hoặc sắp xếp nội dung học tập thay mình.', 8),
+                         ('dep-09', 'cognitive', 'Tôi thường hỏi AI câu trả lời trước khi tự suy nghĩ về vấn đề.', 9),
+                         ('dep-10', 'cognitive', 'Tôi dựa vào AI để phân tích vấn đề thay vì tự phân tích trước.', 10),
+                         ('dep-11', 'cognitive', 'Tôi thường để AI gợi ý kết luận trước khi tự cân nhắc các lập luận.', 11),
+                         ('dep-12', 'cognitive', 'Tôi thường để AI đưa ra quyết định học tập mà mình có thể tự cân nhắc.', 12),
+                         ('dep-13', 'control', 'Tôi đã muốn giảm thời gian dùng AI nhưng thường không duy trì được ý định đó.', 13),
+                         ('dep-14', 'control', 'Khi bắt đầu dùng AI, tôi thường khó dừng lại vào lúc mình dự định.', 14),
+                         ('dep-15', 'control', 'Tôi vẫn dùng AI dù đã quyết định tự làm phần việc đó trước.', 15),
+                         ('dep-16', 'control', 'Tôi thấy khó giới hạn việc dùng AI ngay cả khi muốn tập trung vào việc khác.', 16)
+) AS v(question_id, subscale_key, content, ord)
+         JOIN subscales AS ss
+              ON ss.test_version_id = tv.id
+                  AND ss.subscale_key = v.subscale_key
+WHERE tv.test_slug = 'ai-dependence'
+  AND tv.test_version = 'vi-dependence-v1'
+  AND tv.locale = 'vi-VN'
+ON CONFLICT (test_version_id, question_id) DO UPDATE SET
+                                                         subscale_id = EXCLUDED.subscale_id,
+                                                         content = EXCLUDED.content,
+                                                         display_order = EXCLUDED.display_order;
+
+INSERT INTO options (
+    question_id, option_id, content, score, display_order
+)
+SELECT q.id, v.option_id, v.content, v.score, v.ord
+FROM test_versions AS tv
+         JOIN questions AS q ON q.test_version_id = tv.id
+         CROSS JOIN (VALUES
+                         ('1', 'Hoàn toàn không đồng ý', 1, 1),
+                         ('2', 'Không đồng ý', 2, 2),
+                         ('3', 'Không đồng ý cũng không phản đối', 3, 3),
+                         ('4', 'Đồng ý', 4, 4),
+                         ('5', 'Hoàn toàn đồng ý', 5, 5)
+) AS v(option_id, content, score, ord)
+WHERE tv.test_slug = 'ai-dependence'
+  AND tv.test_version = 'vi-dependence-v1'
+  AND tv.locale = 'vi-VN'
+ON CONFLICT (question_id, option_id) DO UPDATE SET
+                                                   content = EXCLUDED.content,
+                                                   score = EXCLUDED.score,
+                                                   display_order = EXCLUDED.display_order;
+
+INSERT INTO results (
+    test_version_id, category_key, label, min_mean, max_mean,
+    description, feedback, advice, limitations
+)
+SELECT tv.id, v.category_key, v.label, v.min_mean, v.max_mean,
+       v.description, v.feedback, v.advice::jsonb, v.limitations::jsonb
+FROM test_versions AS tv
+         CROSS JOIN (VALUES
+                         (
+                             'low', 'Thấp', 1.00, 2.33,
+                             'Mức phụ thuộc tự báo cáo hiện ở vùng thấp theo ngưỡng thử nghiệm của dự án.',
+                             'Bạn cho biết mình thường có thể tiếp tục học tập mà không cần dựa nhiều vào AI. Việc sử dụng AI như một công cụ hỗ trợ có thể song hành với khả năng tự suy nghĩ và hoàn thành nhiệm vụ.',
+                             '["Tiếp tục thử tự hình thành ý tưởng trước khi nhờ AI góp ý.", "Khi dùng AI, hãy xem câu trả lời như gợi ý để kiểm tra và phát triển thêm."]',
+                             '["Kết quả dựa trên tự báo cáo và chỉ phản ánh câu trả lời tại thời điểm làm bài.", "Đây là bản thử nghiệm tiếng Việt 16 câu lấy cảm hứng từ AIDep-22, chưa được kiểm định tại Việt Nam.", "Các mức phân loại chỉ phục vụ giáo dục và tự nhận thức; không phải chẩn đoán tâm lý."]'
+                         ),
+                         (
+                             'moderate', 'Trung bình', 2.34, 3.66,
+                             'Mức phụ thuộc tự báo cáo hiện ở vùng trung bình theo ngưỡng thử nghiệm của dự án.',
+                             'Câu trả lời gợi ý rằng đôi lúc AI giữ vai trò đáng kể trong cách bạn học. Bạn có thể quan sát những tình huống AI thực sự giúp ích và những lúc mình muốn tự thử trước.',
+                             '["Trước khi hỏi AI, dành vài phút tự nêu cách hiểu hoặc hướng giải quyết.", "Thử hoàn thành một phần nhỏ của nhiệm vụ không dùng AI, rồi dùng AI để đối chiếu."]',
+                             '["Kết quả dựa trên tự báo cáo và chỉ phản ánh câu trả lời tại thời điểm làm bài.", "Đây là bản thử nghiệm tiếng Việt 16 câu lấy cảm hứng từ AIDep-22, chưa được kiểm định tại Việt Nam.", "Các mức phân loại chỉ phục vụ giáo dục và tự nhận thức; không phải chẩn đoán tâm lý."]'
+                         ),
+                         (
+                             'high', 'Cao', 3.67, 5.00,
+                             'Mức phụ thuộc tự báo cáo hiện ở vùng cao theo ngưỡng thử nghiệm của dự án.',
+                             'Câu trả lời cho thấy AI có thể đang tham gia nhiều vào một số hoạt động học tập của bạn. Đây là lời mời suy ngẫm về cách sử dụng công cụ, không phải đánh giá hay kết luận về bạn.',
+                             '["Chọn một nhiệm vụ phù hợp mỗi ngày để tự phác thảo hoặc giải quyết trước khi dùng AI.", "Đặt mục tiêu cụ thể cho mỗi lần dùng AI, chẳng hạn chỉ xin gợi ý hoặc phản hồi.", "Nếu việc sử dụng khiến bạn băn khoăn, hãy trao đổi với giảng viên hoặc người bạn tin cậy về cách học phù hợp."]',
+                             '["Kết quả dựa trên tự báo cáo và chỉ phản ánh câu trả lời tại thời điểm làm bài.", "Đây là bản thử nghiệm tiếng Việt 16 câu lấy cảm hứng từ AIDep-22, chưa được kiểm định tại Việt Nam.", "Các mức phân loại chỉ phục vụ giáo dục và tự nhận thức; không phải chẩn đoán tâm lý."]'
+                         )
+) AS v(
+       category_key, label, min_mean, max_mean,
+       description, feedback, advice, limitations
+    )
+WHERE tv.test_slug = 'ai-dependence'
+  AND tv.test_version = 'vi-dependence-v1'
+  AND tv.locale = 'vi-VN'
+ON CONFLICT (test_version_id, category_key) DO UPDATE SET
+                                                          label = EXCLUDED.label,
+                                                          min_mean = EXCLUDED.min_mean,
+                                                          max_mean = EXCLUDED.max_mean,
+                                                          description = EXCLUDED.description,
+                                                          feedback = EXCLUDED.feedback,
+                                                          advice = EXCLUDED.advice,
+                                                          limitations = EXCLUDED.limitations;
+
+COMMIT;
+
+SELECT * FROM results;
