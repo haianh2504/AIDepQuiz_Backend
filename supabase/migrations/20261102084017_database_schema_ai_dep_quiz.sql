@@ -78,7 +78,7 @@ create table subscales (
     (subscale_key = 'emotional' and label = 'Phụ thuộc về cảm xúc')
     or (subscale_key = 'functional' and label = 'Phụ thuộc về chức năng')
     or (subscale_key = 'cognitive' and label = 'Phụ thuộc về nhận thức')
-    or (subscale_key = 'control' and label = 'Mất khả năng kiểm soát')
+    or (subscale_key = 'control' and label = 'Phụ thuộc về kiểm soát')
   ),
   constraint subscale_order_check check (display_order between 1 and 4)
 );
@@ -216,7 +216,7 @@ FROM test_versions AS tv
                          ('emotional', 'Phụ thuộc về cảm xúc', 1),
                          ('functional', 'Phụ thuộc về chức năng', 2),
                          ('cognitive', 'Phụ thuộc về nhận thức', 3),
-                         ('control', 'Mất khả năng kiểm soát', 4)
+                         ('control', 'Phụ thuộc về kiểm soát', 4)
 ) AS v(subscale_key, label, ord)
 WHERE tv.test_slug = 'ai-dependence'
   AND tv.test_version = 'vi-dependence-v1'

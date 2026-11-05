@@ -61,7 +61,7 @@ Phase 1 chỉ có bài test **AI Dependence**, phiên bản `vi-dependence-v1`, 
 | `emotional`  | Phụ thuộc về cảm xúc   | Bất an, căng thẳng hoặc thiếu tự tin khi không có AI |
 | `functional` | Phụ thuộc về chức năng | Khó hoàn thành nhiệm vụ nếu thiếu AI                 |
 | `cognitive`  | Phụ thuộc về nhận thức | Giao suy nghĩ, phân tích hoặc quyết định cho AI      |
-| `control`    | Mất khả năng kiểm soát | Khó giảm hoặc dừng sử dụng AI dù muốn                |
+| `control`    | Phụ thuộc về kiểm soát | Khó giảm hoặc dừng sử dụng AI dù muốn                |
 
 
 Đây là phiên bản rút gọn thử nghiệm lấy cảm hứng từ bốn nhóm của AIDep-22. AIDep-22 được nghiên cứu trên sinh viên đại học Trung Quốc; kết quả đó không tự động đại diện cho học sinh hoặc người dùng Việt Nam. Phase 1 không đo AI literacy tổng quát. Câu hỏi kiến thức hoặc tình huống về privacy, bias và fact-checking không được cộng vào điểm bài test này; các chủ đề đó có thể được xem xét cho phase sau.
@@ -119,7 +119,7 @@ Các category này là phản hồi giáo dục tạm thời trước khi có d�
 | Hosting dự kiến | Vercel (FE), Render (BE), Supabase (PostgreSQL)                   | Chưa có cấu hình triển khai đã xác nhận trong repository                                         |
 
 
-Luồng kiến trúc theo contract (controller/service BE còn thiếu trong code hiện tại):
+Luồng kiến trúc theo contract (controller/service BE đã có; runtime cần datasource để kiểm chứng):
 
 ```mermaid
 flowchart LR
@@ -166,7 +166,7 @@ Chỉ nút bắt đầu bài test điều hướng từ `/` sang `/quiz`; menu n
 
 ## API contract
 
-Contract API của repository Backend nằm tại [`docs/preparation/api-contract.yaml`](docs/preparation/api-contract.yaml) (OpenAPI 3.0.3, base path `/api/v1`). Contract frontend tương ứng nằm ở repository sibling `../Frontend/api-contract.yaml`; hai contract hiện chưa thống nhất hoàn toàn. Cả hai contract trả `subscale` (key) và `subscaleLabel` (chuỗi hiển thị) cho từng câu hỏi, để giao diện hiện tên khía cạnh phù hợp với câu đang xem. Nhãn `control` thống nhất là “Mất khả năng kiểm soát”; điểm `subscales[].displayMean` cho phép một hoặc hai chữ số sau dấu thập phân. Contract Backend và Frontend được đồng bộ theo các quy tắc này.
+Contract API của repository Backend nằm tại [`docs/preparation/api-contract.yaml`](docs/preparation/api-contract.yaml) (OpenAPI 3.0.3, base path `/api/v1`). Contract frontend tương ứng nằm ở repository sibling `../Frontend/api-contract.yaml`; hai contract hiện chưa thống nhất hoàn toàn. Cả hai contract trả `subscale` (key) và `subscaleLabel` (chuỗi hiển thị) cho từng câu hỏi, để giao diện hiện tên khía cạnh phù hợp với câu đang xem. Nhãn `control` thống nhất là “Phụ thuộc về kiểm soát”; điểm `subscales[].displayMean` cho phép một hoặc hai chữ số sau dấu thập phân. Contract Backend và Frontend được đồng bộ theo các quy tắc này.
 
 ### Dữ liệu DB cho hai màn hình
 
@@ -225,7 +225,7 @@ Response mẫu:
     { "key": "emotional", "label": "Phụ thuộc về cảm xúc", "mean": 3.25, "displayMean": "3.25" },
     { "key": "functional", "label": "Phụ thuộc về chức năng", "mean": 3.5, "displayMean": "3.5" },
     { "key": "cognitive", "label": "Phụ thuộc về nhận thức", "mean": 3.0, "displayMean": "3.0" },
-    { "key": "control", "label": "Mất khả năng kiểm soát", "mean": 3.5, "displayMean": "3.5" }
+    { "key": "control", "label": "Phụ thuộc về kiểm soát", "mean": 3.5, "displayMean": "3.5" }
   ],
   "feedback": "Bạn đang sử dụng AI khá thường xuyên trong một số hoạt động.",
   "advice": [
@@ -346,7 +346,7 @@ Yêu cầu JDK 21, PostgreSQL có thể truy cập và Maven Wrapper. `Backend/s
 
 Trên Windows dùng `mvnw.cmd`. Các lệnh cần datasource PostgreSQL hợp lệ. Spring Docker Compose integration đang bị tắt (`spring.docker.compose.enabled=false`); `compose.yaml` là PostgreSQL mẫu, phải khởi động riêng và không dùng thông tin mẫu ngoài môi trường phát triển.
 
-> Hiện entity mapping chưa khớp đầy đủ migration. Vì vậy, không giả định ứng dụng hoặc Spring context test khởi động thành công với migration hiện tại cho đến khi mapping và schema được đồng bộ.
+> Entity mapping, repository, service, controller và validation đã được triển khai theo migration hiện tại. Spring context test và runtime API vẫn cần PostgreSQL cùng ba biến môi trường datasource để kiểm chứng.
 
 
 
@@ -367,7 +367,7 @@ Migration PostgreSQL hiện có tại `[Backend/supabase/migrations/202611020840
 
 Migration không tạo `attempts` hay bảng lịch sử kết quả cá nhân. Seed data, công cụ migration được chạy trong production và quy trình import Excel chưa được cấu hình. `compose.yaml` dùng giá trị mẫu cho database/user/password.
 
-Ba JPA entity `Question`, `Option`, `Result` đã tồn tại, nhưng hiện chưa bao quát đầy đủ cột/quan hệ của migration; `Result` cũng đang dùng tên/cấu trúc trường khác schema mới. Cần đồng bộ entities, repositories, services, seed data và migration trước khi persistence/API được xem là dùng được.
+Các JPA entity cho sáu bảng nội dung (`TestVersion`, `ScaleLabel`, `Subscale`, `Question`, `Option`, `Result`) cùng repository, service, controller và validation đã được triển khai theo migration. Seed data nằm trong cùng migration; runtime persistence/API vẫn cần được kiểm chứng với PostgreSQL.
 
 ## Trạng thái triển khai
 
@@ -375,8 +375,8 @@ Ba JPA entity `Question`, `Option`, `Result` đã tồn tại, nhưng hiện ch�
 | Hạng mục                   | Hiện tại                                                                      |
 | -------------------------- | ----------------------------------------------------------------------------- |
 | FE routes và UI            | Có source cho `/`, `/quiz`, `/result_quiz`; có API client và TypeScript types |
-| BE runtime API             | Chưa có controller, repository hoặc service triển khai các endpoint contract  |
-| Persistence                | Có ba entity và migration, nhưng chưa đồng bộ hoàn toàn                       |
+| BE runtime API             | Đã có GET quiz và POST submit theo contract; runtime chưa được kiểm chứng     |
+| Persistence                | Sáu entity và repository đã đồng bộ migration; runtime chưa được kiểm chứng  |
 | API contract               | FE `api-contract.yaml` là chuẩn; bản tại BE còn sai khác                      |
 | Rate limiting              | Chưa chốt và chưa triển khai; không nằm trong contract                        |
 | Seed/import nội dung       | Chưa có                                                                       |
@@ -543,4 +543,3 @@ Khi thay đổi quiz, scoring hoặc API:
 ## Tuyên bố sử dụng
 
 > AIDepQuiz is an educational self-assessment tool designed to help people reflect on their relationship with AI. Results are self-reported and preliminary. They are not a clinical diagnosis or a definitive judgment of a person's abilities.
-

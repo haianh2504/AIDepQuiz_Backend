@@ -153,7 +153,7 @@ paths:
                     mean: 3
                     displayMean: '3.0'
                   - key: control
-                    label: Mất khả năng kiểm soát
+                    label: Phụ thuộc về kiểm soát
                     mean: 3.5
                     displayMean: '3.5'
                 feedback: Bạn đang sử dụng AI khá thường xuyên trong một số hoạt động.
