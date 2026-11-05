@@ -65,7 +65,7 @@ public class Question {
 
     @NotNull(message = "Subscale is required")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "subscale_id", nullable = false)
+    @JoinColumn(name = "subscale_id", referencedColumnName = "id", nullable = false)
     private Subscale subscale;
 
     @NotBlank(message = "Question ID is required")

@@ -22,12 +22,16 @@ public class AiDependenceTestController {
         this.aiDependenceTestService = aiDependenceTestService;
     }
 
-    @GetMapping("/ai-dependence")
+    @GetMapping(value = "/ai-dependence", produces = MediaType.APPLICATION_JSON_VALUE)
     public QuizDefinitionResponse getAiDependenceTest() {
         return aiDependenceTestService.getAiDependenceTest();
     }
 
-    @PostMapping(value = "/ai-dependence/submit", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(
+            value = "/ai-dependence/submit",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
     public SubmitQuizResponse submitAiDependenceTest(
             @Valid @RequestBody SubmitQuizRequest request
     ) {

@@ -13,7 +13,7 @@ public interface ResultRepository extends JpaRepository<Result, Long> {
 
     Optional<Result> findByTestVersion_IdAndMinMeanLessThanEqualAndMaxMeanGreaterThanEqual(
             Long testVersionId,
-            BigDecimal mean,
-            BigDecimal sameMean
+            BigDecimal meanForMinRange,
+            BigDecimal meanForMaxRange
     );
 }

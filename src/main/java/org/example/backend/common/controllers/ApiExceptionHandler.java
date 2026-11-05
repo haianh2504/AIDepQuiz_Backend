@@ -4,11 +4,13 @@ import jakarta.validation.ConstraintViolationException;
 import org.example.backend.common.DTO.ErrorDetail;
 import org.example.backend.common.DTO.ErrorResponse;
 import org.example.backend.common.exception.ApiException;
+import org.example.backend.testversion.exception.InvalidTestDefinitionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -75,13 +77,29 @@ public class ApiExceptionHandler {
         );
     }
 
+    @ExceptionHandler(InvalidTestDefinitionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidTestDefinition(
+            InvalidTestDefinitionException exception
+    ) {
+        return internalError(exception.getClass().getName());
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<ErrorResponse> handleDataAccessException(DataAccessException exception) {
+        return internalError(exception.getClass().getName());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception exception) {
+        return internalError(exception.getClass().getName());
+    }
+
+    private ResponseEntity<ErrorResponse> internalError(String exceptionType) {
         String errorId = UUID.randomUUID().toString();
         LOGGER.error(
                 "Unexpected API failure errorId={} exceptionType={}",
                 errorId,
-                exception.getClass().getName()
+                exceptionType
         );
         return response(
                 HttpStatus.INTERNAL_SERVER_ERROR,
