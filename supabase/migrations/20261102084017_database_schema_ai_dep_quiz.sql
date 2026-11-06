@@ -359,3 +359,16 @@ WHERE tv.test_slug = 'ai-dependence'
   AND tv.test_version = 'vi-dependence-v1'
   AND tv.locale = 'vi-VN'
   AND s.subscale_key = 'control';
+
+UPDATE public.questions
+SET content = CASE question_id
+                  WHEN 'dep-13' THEN 'Tôi thường bắt đầu sử dụng AI trước khi tự cân nhắc xem mình có thật sự cần đến AI hay không'
+                  WHEN 'dep-16' THEN 'Tôi thường mở AI theo thói quen, dù chưa xác định rõ mình cần AI hỗ trợ việc gì'
+    END
+WHERE question_id IN ('dep-13', 'dep-16');
+
+ROLLBACK;
+
+SELECT question_id, content
+FROM public.questions
+WHERE question_id IN ('dep-13', 'dep-16');
