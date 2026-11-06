@@ -327,4 +327,35 @@ ON CONFLICT (test_version_id, category_key) DO UPDATE SET
 
 COMMIT;
 
-SELECT * FROM results;
+BEGIN;
+
+ALTER TABLE public.subscales
+    DROP CONSTRAINT subscale_label_check;
+
+UPDATE public.subscales s
+SET label = 'Phụ thuộc về kiểm soát'
+FROM public.test_versions tv
+WHERE s.test_version_id = tv.id
+  AND tv.test_slug = 'ai-dependence'
+  AND tv.test_version = 'vi-dependence-v1'
+  AND tv.locale = 'vi-VN'
+  AND tv.is_active = true
+  AND s.subscale_key = 'control'
+RETURNING tv.test_version, s.subscale_key, s.label;
+
+ALTER TABLE public.subscales
+    ADD CONSTRAINT subscale_label_check CHECK (
+        (subscale_key = 'emotional' AND label = 'Phụ thuộc về cảm xúc')
+            OR (subscale_key = 'functional' AND label = 'Phụ thuộc về chức năng')
+            OR (subscale_key = 'cognitive' AND label = 'Phụ thuộc về nhận thức')
+            OR (subscale_key = 'control' AND label = 'Phụ thuộc về kiểm soát')
+        );
+
+COMMIT;
+SELECT tv.test_version, tv.is_active, s.subscale_key, s.label
+FROM public.test_versions tv
+         JOIN public.subscales s ON s.test_version_id = tv.id
+WHERE tv.test_slug = 'ai-dependence'
+  AND tv.test_version = 'vi-dependence-v1'
+  AND tv.locale = 'vi-VN'
+  AND s.subscale_key = 'control';

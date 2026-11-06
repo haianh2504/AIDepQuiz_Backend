@@ -147,15 +147,15 @@ paths:
                   - key: functional
                     label: Phụ thuộc về chức năng
                     mean: 3.5
-                    displayMean: '3.5'
+                    displayMean: '3.50'
                   - key: cognitive
                     label: Phụ thuộc về nhận thức
                     mean: 3
-                    displayMean: '3.0'
+                    displayMean: '3.00'
                   - key: control
                     label: Phụ thuộc về kiểm soát
                     mean: 3.5
-                    displayMean: '3.5'
+                    displayMean: '3.50'
                 feedback: Bạn đang sử dụng AI khá thường xuyên trong một số hoạt động.
                 advice:
                   - Hãy thử tự phác thảo hướng giải quyết trước khi hỏi AI.
@@ -322,7 +322,7 @@ components:
           type: integer
           enum:
             - 2
-          description: Số chữ số hiển thị sau dấu thập phân.
+          description: Số chữ số sau dấu thập phân cho điểm trung bình toàn bài và từng khía cạnh.
         reverseScoredItems:
           type: boolean
           enum:
@@ -625,8 +625,8 @@ components:
           description: Điểm thực dùng để diễn giải nhóm, tính trên 4 item.
         displayMean:
           type: string
-          pattern: '^[1-5]\.[0-9]{1,2}$'
-          description: Điểm nhóm hiển thị tối đa 2 chữ số, bỏ số 0 cuối không cần thiết.
+          pattern: '^[1-5]\.[0-9]{2}$'
+          description: Điểm nhóm được làm tròn và hiển thị cố định 2 chữ số thập phân, giữ số 0 ở cuối (ví dụ 3.50).
 
     Category:
       type: object
